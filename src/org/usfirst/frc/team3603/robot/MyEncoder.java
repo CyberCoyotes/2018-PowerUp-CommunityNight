@@ -43,8 +43,8 @@ public class MyEncoder implements PIDSource {
 		offset = talon.getSelectedSensorPosition(0);
 	}
 	
-	public void setMultiplier(double knew) {
-		multiplier = knew;
+	public void setMultiplier(double value) {
+		multiplier = value;
 	}
 
 	@Override
