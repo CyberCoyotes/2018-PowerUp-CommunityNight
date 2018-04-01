@@ -115,6 +115,10 @@ public class Robot extends IterativeRobot {
 			}
 		}).start();
 	}
+	@Override
+	public void disabledPeriodic() {
+		read();
+	}
 	
 	@Override
 	public void autonomousInit() {
