@@ -119,7 +119,7 @@ public class Robot extends IterativeRobot {
 	public void disabledPeriodic() {
 		read();
 	}
-	
+	//
 	@Override
 	public void autonomousInit() {
 		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
