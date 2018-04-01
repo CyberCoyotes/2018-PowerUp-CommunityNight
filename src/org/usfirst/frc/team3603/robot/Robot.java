@@ -13,6 +13,7 @@ import edu.wpi.cscore.CvSource;
 import edu.wpi.cscore.UsbCamera;
 import edu.wpi.cscore.VideoMode.PixelFormat;
 import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
@@ -30,18 +31,18 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends IterativeRobot {
 	
-	WPI_TalonSRX left1 = new WPI_TalonSRX(10);//TODO device ID
-	WPI_TalonSRX left2 = new WPI_TalonSRX(12);//TODO device ID
-	WPI_TalonSRX right1 = new WPI_TalonSRX(4);//TODO device ID
-	WPI_TalonSRX right2 = new WPI_TalonSRX(6);//TODO device ID
+	WPI_TalonSRX left1 = new WPI_TalonSRX(5);//TODO device ID
+	WPI_TalonSRX left2 = new WPI_TalonSRX(6);//TODO device ID
+	WPI_TalonSRX right1 = new WPI_TalonSRX(3);//TODO device ID
+	WPI_TalonSRX right2 = new WPI_TalonSRX(4);//TODO device ID
 	SpeedControllerGroup left = new SpeedControllerGroup(left1, left2);
 	SpeedControllerGroup right = new SpeedControllerGroup(right1, right2);
 	DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 	
 	WPI_TalonSRX leftHolder = new WPI_TalonSRX(9);//TODO device ID /Leftholder speedcontroller
 	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//TODO device ID /Rightholder speedcontroller
-	WPI_TalonSRX cubeLift = new WPI_TalonSRX(3); //TODO device ID /Cube lift speed controller
-	WPI_TalonSRX lift2 = new WPI_TalonSRX(0);//TODO device ID //Second lift controller
+	WPI_TalonSRX cubeLift = new WPI_TalonSRX(1); //TODO device ID /Cube lift speed controller
+	WPI_TalonSRX lift2 = new WPI_TalonSRX(2);//TODO device ID //Second lift controller
 	WPI_TalonSRX arm = new WPI_TalonSRX(7); //TODO device ID /Arm speed controller
 	Servo release = new Servo(0); //Servo for the arm release
 	
@@ -75,16 +76,17 @@ public class Robot extends IterativeRobot {
 	int step; //The auton step
 	final static double scaleStartHeight = 15000;//Double for scale encoder position
 	final static double switchHeight = 12000;//Double for the switch encoder position
-	final static double lowGear = 1/(9.07*4096);//TODO check these
-	final static double highGear = 1/(19.61*4096);
+	final static double lowGear = (4*Math.PI)/(9.07*4096);//TODO check these and scale with wheel circumference
+	final static double highGear= (4*Math.PI)/(19.61*4096);
 	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
 	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
 	
 	@Override
 	public void robotInit() {
+		new Compressor().start();
 		cubeLift.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.setInverted(true);//TODO invert if the PID doesn't work
-		lift2.set(ControlMode.Follower, 3);//TODO check device ID
+		lift2.set(ControlMode.Follower, 1);//TODO check device ID
 		
 		left.setInverted(true);
 		right.setInverted(true);
