@@ -2,6 +2,7 @@ package org.usfirst.frc.team3603.robot;
 
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
+import org.usfirst.frc.team3603.robot.MyLimitSwitch.Position;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
@@ -29,24 +30,18 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends IterativeRobot {
 	
-	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
-	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
-
-	//All of these are individual speed controllers
 	WPI_TalonSRX left1 = new WPI_TalonSRX(10);//TODO device ID
 	WPI_TalonSRX left2 = new WPI_TalonSRX(12);//TODO device ID
 	WPI_TalonSRX right1 = new WPI_TalonSRX(4);//TODO device ID
 	WPI_TalonSRX right2 = new WPI_TalonSRX(6);//TODO device ID
-	//This groups the speed controllers into left and right
 	SpeedControllerGroup left = new SpeedControllerGroup(left1, left2);
 	SpeedControllerGroup right = new SpeedControllerGroup(right1, right2);
-	//This groups them into the new type of RobotDrive
 	DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 	
 	WPI_TalonSRX leftHolder = new WPI_TalonSRX(9);//TODO device ID /Leftholder speedcontroller
 	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//TODO device ID /Rightholder speedcontroller
 	WPI_TalonSRX cubeLift = new WPI_TalonSRX(3); //TODO device ID /Cube lift speed controller
-	WPI_TalonSRX lift2 = new WPI_TalonSRX(0);//TODO device ID
+	WPI_TalonSRX lift2 = new WPI_TalonSRX(0);//TODO device ID //Second lift controller
 	WPI_TalonSRX arm = new WPI_TalonSRX(7); //TODO device ID /Arm speed controller
 	Servo release = new Servo(0); //Servo for the arm release
 	
@@ -60,12 +55,13 @@ public class Robot extends IterativeRobot {
 	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //TODO check on robot /Arm angle encoder
 	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //TODO check device ID /Encoder for the cube lift
 	MyEncoder driveEnc = new MyEncoder(left2, false, lowGear);//TODO test, talon
+	MyLimitSwitch topSwitch = new MyLimitSwitch(cubeLift, Position.fwd);
+	MyLimitSwitch bottomSwitch = new MyLimitSwitch(cubeLift, Position.rev);
 	
-	PressureSensor pressure = new PressureSensor(0); //TODO plug it in /Pressure sensor
+	PressureSensor pressure = new PressureSensor(0); //TODO plug it in to ANALOG /Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
 	
-	Spark store = new Spark(7);
-	PIDController strPID = new PIDController(0.15, 0, 0, gyro, store); //TODO real PID PID controller for driving straight
+	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
 	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, cubeLift); //PID controller for lift
 	PIDController armPID = new PIDController(0.05, 0, 0, armEnc, arm); //PID controller for arm
 	
@@ -75,13 +71,14 @@ public class Robot extends IterativeRobot {
 	
 	DriverStation matchInfo = DriverStation.getInstance(); //Object to get switch/scale colors
 
-	String sides; //A string to store the switch and scale colors
 	AutonType autonMode; //Enumerator for the autonomous mode
 	int step; //The auton step
-	final static double scaleStartHeight = 20200;//Double for scale encoder position //TODO change this number if the lift goes too height/low
-	final static double switchHeight = 12000;//Double for the switch encoder position TODO change this number if the lift is too high/low for the switch
+	final static double scaleStartHeight = 15000;//Double for scale encoder position
+	final static double switchHeight = 12000;//Double for the switch encoder position
 	final static double lowGear = 1/(9.07*4096);//TODO check these
 	final static double highGear = 1/(19.61*4096);
+	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
+	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
 	
 	@Override
 	public void robotInit() {
@@ -92,7 +89,6 @@ public class Robot extends IterativeRobot {
 		left.setInverted(true);
 		right.setInverted(true);
 		
-		store.disable(); //TODO Disable the PID store
 		cubeLift.getSensorCollection();//TODO remove?
 		//compressor.start(); //Start compressor
 		mainDrive.setSafetyEnabled(false); //Disable safety
@@ -117,9 +113,10 @@ public class Robot extends IterativeRobot {
 			}
 		}).start();
 	}
+	
 	@Override
 	public void autonomousInit() {
-		sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
+		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
 		
 		int position;
 		if(slot1.get()) { //Logic to find the auton rotating switch position
@@ -136,7 +133,6 @@ public class Robot extends IterativeRobot {
 		String RLR = "RLR";
 		String LLL = "LLL";
 		String RRR = "RRR";
-		String empty = "";
 		
 		System.out.println("Position: " + position);
 		System.out.println("Sides: " + sides);
@@ -180,21 +176,22 @@ public class Robot extends IterativeRobot {
 			autonMode = AutonType.straight;//Override and drive straight
 			System.out.println("Autonomous mode: Override straight");
 		}
-		if(autonMode == null || sides.equals(empty) || sides.length() == 0 || sides == null || sides.equals(null)) {
+		if(autonMode == null) {
 			autonMode = AutonType.straight;
 			System.out.println("ERROR: autonMode is null. Defaulting to cross auto line.");
 		}
 		
 		strPID.setSetpoint(0); //Set the setpoint of the drive straight PID to 0 degrees
+		armPID.setSetpoint(75);
 		gyro.reset(); //Set the gyro angle to 0
 		driveEnc.reset(); //Set the touchless encoder to 0
 		armEnc.reset();
 		armEnc.reset();//Reset the arm encoder
-		step = 0; //set the auton step to step 0
-		armPID.setSetpoint(75);
 		strPID.enable();
 		shift.set(out);
-	}
+		step = 0; //set the auton step to step 0
+	}//TODO add pneumatics
+	
 	@Override
 	public void autonomousPeriodic() {
 		release.set(0.5);//Release the arm by raising the servo
@@ -234,6 +231,7 @@ public class Robot extends IterativeRobot {
 	public void teleopInit() {
 		armPID.setSetpoint(armEnc.get());
 		liftPID.setSetpoint(liftPID.get());
+		shift.set(in);
 		strPID.disable();
     	driveEnc.reset();
 	}
@@ -246,7 +244,7 @@ public class Robot extends IterativeRobot {
 		 * DRIVER *
 		 **********/
 		
-		double sense = -0.5 * joy1.getRawAxis(3) + 0.5;//Sensitivity coefficient determined by the little axis on the big joystick
+		double sense = -0.5 * joy1.getRawAxis(3) + 0.5;//Sensitivity coefficient
 		double y = -Math.pow(joy1.getRawAxis(1), 1); //Double to store the joystick's y axis
 		double rot = Math.pow(joy1.getRawAxis(2), 1)/1.25; //Double to store the joystick's x axis
 		if(Math.abs(y) >= 0.05 || Math.abs(rot) >= 0.05 && !joy1.getRawButton(1)) { //Thresholding function
@@ -273,7 +271,7 @@ public class Robot extends IterativeRobot {
 		if(Math.abs(joy2.getRawAxis(1)) >= 0.1) { //If axis 1 is off-center...
 			liftPID.disable();
 			cubeLift.set(joy2.getRawAxis(1));//Set the lift speed to the axis reading
-			liftPID.setSetpoint(liftEnc.get());//Set the lift PID setpoint to the current encoder value, so it locks into place when the joystick isn't being touched
+			liftPID.setSetpoint(liftEnc.get());//Set the lift PID setpoint to the current encoder value
 		} else {//If nothing is being pressed...
 			liftPID.enable();
 		}
@@ -281,35 +279,38 @@ public class Robot extends IterativeRobot {
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
 			armPID.disable();
 			arm.set(joy2.getRawAxis(5));//Set the arm motor to the axis reading
-			armPID.setSetpoint(armEnc.get());//Set the armPID setpoint to the current encoder reading, so that it locks in to place
+			armPID.setSetpoint(armEnc.get());//Set the armPID setpoint to the current encoder reading
 		} else {//If the joystick isn't being touched...
 			armPID.enable();
 		}
 		
 		//TODO add piston behavior
 		if(Math.abs(joy2.getRawAxis(2)) >= 0.25) { //If the left trigger is pulled...
-			leftHolder.set(0.85); //Input cube TODO change these numbers if the intake speed is too fast/slow
+			leftHolder.set(0.85); //Input cube
 			rightHolder.set(0.85);
+			grabber.set(out);
 		} else if(Math.abs(joy2.getRawAxis(3)) >= 0.25) { //If right trigger is pulled...
-			leftHolder.set(-0.45);//Soft spit TODO change these numbers if the grabber motors are too fast/slow
+			leftHolder.set(-0.45);//Soft spit
 			rightHolder.set(-0.45);
+			grabber.set(out);
 		} else if(joy2.getRawButton(5)) { //If left bumper is pressed...
 			leftHolder.set(-0.75); // Rotate cube
 			rightHolder.set(0.75);
+			grabber.set(in);
 		} else if(joy2.getRawButton(6)) { //If right bumper is pressed...
 			leftHolder.set(0.75); // Rotate cube
 			rightHolder.set(-0.75);
+			grabber.set(in);
 		} else if(joy2.getRawButton(4)){ //If the Y button is pressed...
 			leftHolder.set(-0.75);//Hard spit
 			rightHolder.set(-0.75);
+			grabber.set(out);
 		} else {
 			leftHolder.set(0);
 			rightHolder.set(0);
+			grabber.set(in);
 		}
 		
-		grabber.set(joy2.getRawButton(1) ? out : in); //TODO select button
-		
-			
 		read();//Read from sensors
 	}
 	
@@ -328,6 +329,10 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putBoolean("Slot 1", slot1.get());
 		SmartDashboard.putBoolean("Slot 2", slot2.get());
 		SmartDashboard.putBoolean("Slot 3", slot3.get());
+		SmartDashboard.putBoolean("Slot 4", (!slot1.get() && !slot2.get() && !slot3.get()));
+		
+		SmartDashboard.putBoolean("Top limit switch", topSwitch.get());
+		SmartDashboard.putBoolean("Bottom limit switch", bottomSwitch.get());
 		
 		SmartDashboard.putString("results", matchInfo.getGameSpecificMessage());
 	}
@@ -340,7 +345,8 @@ public class Robot extends IterativeRobot {
 		rightScale, leftScale, rightSwitch, leftSwitch, straight, rightMiddle, leftMiddle
 	}
 	
-	void leftMiddle() {//TODO check this
+	void leftMiddle() {
+		shift.set(in);
 		switch(step) {
 		case 0:
 			liftPID.setSetpoint(switchHeight);//Set the liftPID to 12000
@@ -386,7 +392,6 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 5://Step 5
-			//TODO add pneumatics
 			leftHolder.set(-0.5);//Output the cube into the switch
 			rightHolder.set(-0.5);
 			break;
@@ -416,9 +421,9 @@ public class Robot extends IterativeRobot {
 			break;
 		}
 	}
+	
 	void straight() {//Auton the drive straight
-		
-		if(driveEnc.get() < 83) {//TODO If the robot has driven less than 83 inches...
+		if(driveEnc.get() < 83) {//TODO Check /If the robot has driven less than 83 inches...
 			mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight at -3/4 speed
 		} else {//Else
 			mainDrive.arcadeDrive(0, 0);//Stop
@@ -434,7 +439,7 @@ public class Robot extends IterativeRobot {
 			step = 1;
 			break;
 		case 1:
-			if(driveEnc.get() < 252) {//If the robot has driven less than 252 inches TODO change this if the robot drives too short/far
+			if(driveEnc.get() < 252) {//If the robot has driven less than 252 inches
 				mainDrive.arcadeDrive(0.75, strPID.get()); //Drive forwards at 3/4 speed and drive straight
 			} else {//If the robot has driven further than 252 inches
 				mainDrive.arcadeDrive(0, 0);//Stop
@@ -452,7 +457,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 3://Step 3 TODO change to limit switch
-			if(liftEnc.get() < 23000) {//Don't activate the cube spitter until the lift has reached a certain height
+			if(liftEnc.get() < 23000) {//Wait until the lift is up
 			} else {
 				leftHolder.set(-0.75);
 				rightHolder.set(-0.75);
@@ -488,7 +493,7 @@ public class Robot extends IterativeRobot {
 				mainDrive.arcadeDrive(0, 0);//stop
 			}
 			break;
-		case 3://step 3 TODO pneu
+		case 3:
 			if(liftEnc.get() < 23000) {//dont output the cube until the lift is up
 			} else {
 				leftHolder.set(-0.75);
@@ -540,11 +545,10 @@ public class Robot extends IterativeRobot {
 		}
 	}
 	
-	
 	void rightSwitch() {//auton for the right side of the switch
 		switch(step) {
 		case 0:
-			liftPID.setSetpoint(switchHeight);//set the lift setpoint TODO change if too high/low
+			liftPID.setSetpoint(switchHeight);//set the lift setpoint
 			liftPID.enable();//enable lift PID
 			step = 1;
 			break;
