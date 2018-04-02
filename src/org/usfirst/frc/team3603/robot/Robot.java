@@ -92,7 +92,6 @@ public class Robot extends IterativeRobot {
 		right.setInverted(true);
 		
 		cubeLift.getSensorCollection();//TODO remove?
-		//compressor.start(); //Start compressor
 		mainDrive.setSafetyEnabled(false); //Disable safety
 		
 		liftPID.setOutputRange(-0.7, 0.7); //Set the range of speeds for the lift PID
@@ -115,11 +114,7 @@ public class Robot extends IterativeRobot {
 			}
 		}).start();
 	}
-	@Override
-	public void disabledPeriodic() {
-		read();
-	}
-	//
+	
 	@Override
 	public void autonomousInit() {
 		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
