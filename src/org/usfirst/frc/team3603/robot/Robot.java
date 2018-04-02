@@ -1,18 +1,8 @@
 package org.usfirst.frc.team3603.robot;
 
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-import org.usfirst.frc.team3603.robot.MyLimitSwitch.Position;
-
-import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
 
-import edu.wpi.cscore.CvSink;
-import edu.wpi.cscore.CvSource;
-import edu.wpi.cscore.UsbCamera;
-import edu.wpi.cscore.VideoMode.PixelFormat;
-import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -56,19 +46,19 @@ public class Robot extends IterativeRobot {
 	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //TODO check on robot /Arm angle encoder
 	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //TODO check device ID /Encoder for the cube lift
 	MyEncoder driveEnc = new MyEncoder(left2, false, lowGear);//TODO test, talon
-	MyLimitSwitch topSwitch = new MyLimitSwitch(cubeLift, Position.fwd);
-	MyLimitSwitch bottomSwitch = new MyLimitSwitch(cubeLift, Position.rev);
+	DigitalInput highSwitch = new DigitalInput(5);
+	DigitalInput lowSwitch = new DigitalInput(6);
 	
 	PressureSensor pressure = new PressureSensor(0); //TODO plug it in to ANALOG /Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
 	
 	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
-	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, cubeLift); //PID controller for lift
+	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, new Spark(6)); //PID controller for lift
 	PIDController armPID = new PIDController(0.05, 0, 0, armEnc, arm); //PID controller for arm
 	
-	DigitalInput slot1 = new DigitalInput(3); //Digital inputs for the auton switch
-	DigitalInput slot2 = new DigitalInput(4);//TODO check these
-	DigitalInput slot3 = new DigitalInput(5);
+	DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
+	DigitalInput slot2 = new DigitalInput(3);//TODO check these
+	DigitalInput slot3 = new DigitalInput(4);
 	
 	DriverStation matchInfo = DriverStation.getInstance(); //Object to get switch/scale colors
 
@@ -86,7 +76,7 @@ public class Robot extends IterativeRobot {
 		new Compressor().start();
 		cubeLift.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.setInverted(true);//TODO invert if the PID doesn't work
-		lift2.set(ControlMode.Follower, 1);//TODO check device ID
+		//lift2.set(ControlMode.Follower, 1);//TODO check device ID
 		
 		left.setInverted(true);
 		right.setInverted(true);
@@ -96,24 +86,15 @@ public class Robot extends IterativeRobot {
 		
 		liftPID.setOutputRange(-0.7, 0.7); //Set the range of speeds for the lift PID
 		armPID.setOutputRange(-0.5, 0.5); //Set the range of speeds for the arm PID
-		liftEnc.reset(); //Zero out the lift encoder
-		new Thread(() -> {
-			UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
-			// camera.setResolution(320, 480);
-			// camera.setFPS(15); //
-			camera.setVideoMode(PixelFormat.kMJPEG, 4000, 3000, 15);
-
-			CvSink cvSink = CameraServer.getInstance().getVideo();
-			CvSource outputStream = CameraServer.getInstance().putVideo("Blur", 640, 480);
-			Mat source = new Mat();
-			Mat output = new Mat();
-			while (!Thread.interrupted()) {
-				cvSink.grabFrame(source);
-				Imgproc.cvtColor(source, output, Imgproc.COLOR_BGR2GRAY);
-				outputStream.putFrame(output);
-			}
-		}).start();
+		liftEnc.reset(); //Zero out the lift 
+		
 	}
+	
+	@Override
+	public void disabledPeriodic() {
+		read();
+	}
+	
 	
 	@Override
 	public void autonomousInit() {
@@ -269,13 +250,34 @@ public class Robot extends IterativeRobot {
 		 * MANIPULATOR *
 		 ***************/
 		
-		if(Math.abs(joy2.getRawAxis(1)) >= 0.1) { //If axis 1 is off-center...
-			liftPID.disable();
-			cubeLift.set(joy2.getRawAxis(1));//Set the lift speed to the axis reading
-			liftPID.setSetpoint(liftEnc.get());//Set the lift PID setpoint to the current encoder value
+		if(Math.abs(joy2.getRawAxis(1)) >= 0.15) { //If axis 1 is off-center...
+			if(!lowSwitch.get()) {
+				if(joy2.getRawAxis(1) < 0) {
+					cubeLift.set(0);
+					lift2.set(cubeLift.get());
+				} else {
+					cubeLift.set(joy2.getRawAxis(1));
+					lift2.set(cubeLift.get());
+				}
+			} else if(!highSwitch.get()) {
+				if(joy2.getRawAxis(1) > 0) {
+					cubeLift.set(0);
+					lift2.set(cubeLift.get());
+				} else {
+					cubeLift.set(joy2.getRawAxis(1));
+					lift2.set(cubeLift.get());
+				}
+			} else {
+				cubeLift.set(joy2.getRawAxis(1));
+				lift2.set(cubeLift.get());
+			}
+			//liftPID.setSetpoint(liftEnc.get());//Set the lift PID setpoint to the current encoder value
 		} else {//If nothing is being pressed...
-			liftPID.enable();
+			//liftPID.enable();
+			cubeLift.set(0);
+			lift2.set(cubeLift.get());
 		}
+		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
 			armPID.disable();
@@ -327,13 +329,13 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("Gyro", gyro.getAngle());
 		SmartDashboard.putNumber("Drive distance", driveEnc.get());
 		
+		SmartDashboard.putBoolean("Top switch", !highSwitch.get());
+		SmartDashboard.putBoolean("Bottom switch", !lowSwitch.get());
+		
 		SmartDashboard.putBoolean("Slot 1", slot1.get());
 		SmartDashboard.putBoolean("Slot 2", slot2.get());
 		SmartDashboard.putBoolean("Slot 3", slot3.get());
 		SmartDashboard.putBoolean("Slot 4", (!slot1.get() && !slot2.get() && !slot3.get()));
-		
-		SmartDashboard.putBoolean("Top limit switch", topSwitch.get());
-		SmartDashboard.putBoolean("Bottom limit switch", bottomSwitch.get());
 		
 		SmartDashboard.putString("results", matchInfo.getGameSpecificMessage());
 	}
