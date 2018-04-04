@@ -1,5 +1,6 @@
 package org.usfirst.frc.team3603.robot;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
 
@@ -53,7 +54,7 @@ public class Robot extends IterativeRobot {
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
 	
 	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
-	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, new Spark(6)); //PID controller for lift
+	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, cubeLift); //PID controller for lift
 	PIDController armPID = new PIDController(0.05, 0, 0, armEnc, arm); //PID controller for arm
 	
 	DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
@@ -76,7 +77,7 @@ public class Robot extends IterativeRobot {
 		new Compressor().start();
 		cubeLift.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.setInverted(true);//TODO invert if the PID doesn't work
-		//lift2.set(ControlMode.Follower, 1);//TODO check device ID
+		lift2.set(ControlMode.Follower, 1);//TODO check device ID
 		
 		left.setInverted(true);
 		right.setInverted(true);
@@ -250,32 +251,38 @@ public class Robot extends IterativeRobot {
 		 * MANIPULATOR *
 		 ***************/
 		
-		if(Math.abs(joy2.getRawAxis(1)) >= 0.15) { //If axis 1 is off-center...
-			if(!lowSwitch.get()) {
-				if(joy2.getRawAxis(1) < 0) {
-					cubeLift.set(0);
-					lift2.set(cubeLift.get());
-				} else {
-					cubeLift.set(joy2.getRawAxis(1));
-					lift2.set(cubeLift.get());
-				}
-			} else if(!highSwitch.get()) {
-				if(joy2.getRawAxis(1) > 0) {
-					cubeLift.set(0);
-					lift2.set(cubeLift.get());
-				} else {
-					cubeLift.set(joy2.getRawAxis(1));
-					lift2.set(cubeLift.get());
-				}
-			} else {
+		if(highSwitch.get() && lowSwitch.get() && Math.abs(joy2.getRawAxis(1)) > 0.15) {
+			liftPID.disable();
+			cubeLift.set(joy2.getRawAxis(1));
+			liftPID.setSetpoint(liftEnc.get());
+		} else if(!highSwitch.get()) {
+			if(liftPID.get() < 0) {
+				liftPID.disable();
+				cubeLift.set(0);
+			} else if(Math.abs(joy2.getRawAxis(1)) <= 0.15) {
+				cubeLift.set(0);
+			} else if(Math.abs(joy2.getRawAxis(1)) >= 0.15) {
+				liftPID.disable();
 				cubeLift.set(joy2.getRawAxis(1));
-				lift2.set(cubeLift.get());
+				liftPID.setSetpoint(liftEnc.get());
+			} else if(liftPID.get() >= 0) {
+				liftPID.enable();
 			}
-			//liftPID.setSetpoint(liftEnc.get());//Set the lift PID setpoint to the current encoder value
-		} else {//If nothing is being pressed...
-			//liftPID.enable();
-			cubeLift.set(0);
-			lift2.set(cubeLift.get());
+		} else if(!lowSwitch.get()) {
+			if(liftPID.get() > 0) {
+				liftPID.disable();
+				cubeLift.set(0);
+			} else if(Math.abs(joy2.getRawAxis(1)) >= -0.15) {
+				cubeLift.set(0);
+			} else if(Math.abs(joy2.getRawAxis(1)) <= -0.15) {
+				liftPID.disable();
+				cubeLift.set(joy2.getRawAxis(1));
+				liftPID.setSetpoint(liftEnc.get());
+			} else if(liftPID.get() >= 0) {
+				liftPID.enable();
+			}
+		} else {
+			liftPID.enable();
 		}
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
