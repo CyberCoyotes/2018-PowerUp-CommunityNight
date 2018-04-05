@@ -22,19 +22,19 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends IterativeRobot {
 	
-	WPI_TalonSRX left1 = new WPI_TalonSRX(5);//TODO device ID
-	WPI_TalonSRX left2 = new WPI_TalonSRX(6);//TODO device ID
-	WPI_TalonSRX right1 = new WPI_TalonSRX(3);//TODO device ID
-	WPI_TalonSRX right2 = new WPI_TalonSRX(4);//TODO device ID
+	WPI_TalonSRX left1 = new WPI_TalonSRX(5);
+	WPI_TalonSRX left2 = new WPI_TalonSRX(6);
+	WPI_TalonSRX right1 = new WPI_TalonSRX(3);
+	WPI_TalonSRX right2 = new WPI_TalonSRX(4);
 	SpeedControllerGroup left = new SpeedControllerGroup(left1, left2);
 	SpeedControllerGroup right = new SpeedControllerGroup(right1, right2);
 	DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 	
-	WPI_TalonSRX leftHolder = new WPI_TalonSRX(9);//TODO device ID /Leftholder speedcontroller
-	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//TODO device ID /Rightholder speedcontroller
-	WPI_TalonSRX cubeLift = new WPI_TalonSRX(1); //TODO device ID /Cube lift speed controller
-	WPI_TalonSRX lift2 = new WPI_TalonSRX(2);//TODO device ID //Second lift controller
-	WPI_TalonSRX arm = new WPI_TalonSRX(7); //TODO device ID /Arm speed controller
+	WPI_TalonSRX leftHolder = new WPI_TalonSRX(9);//Leftholder speedcontroller
+	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//Rightholder speedcontroller
+	WPI_TalonSRX cubeLift = new WPI_TalonSRX(1); //Cube lift speed controller
+	WPI_TalonSRX lift2 = new WPI_TalonSRX(2);//Second lift controller
+	WPI_TalonSRX arm = new WPI_TalonSRX(7); //Arm speed controller
 	Servo release = new Servo(0); //Servo for the arm release
 	
 	//Compressor compressor = new Compressor(); //Air compressor
@@ -44,13 +44,13 @@ public class Robot extends IterativeRobot {
 	Joystick joy1 = new Joystick(0); //Large twist-axis joystick
 	Joystick joy2 = new Joystick(1); //Xbox controller
 	
-	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //TODO check on robot /Arm angle encoder
-	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //TODO check device ID /Encoder for the cube lift
+	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //Arm angle encoder
+	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //Encoder for the cube lift
 	MyEncoder driveEnc = new MyEncoder(left2, false, lowGear);//TODO test, talon
 	DigitalInput highSwitch = new DigitalInput(5);
 	DigitalInput lowSwitch = new DigitalInput(6);
 	
-	PressureSensor pressure = new PressureSensor(0); //TODO plug it in to ANALOG /Pressure sensor
+	PressureSensor pressure = new PressureSensor(0); //Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
 	
 	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
@@ -58,7 +58,7 @@ public class Robot extends IterativeRobot {
 	PIDController armPID = new PIDController(0.05, 0, 0, armEnc, arm); //PID controller for arm
 	
 	DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
-	DigitalInput slot2 = new DigitalInput(3);//TODO check these
+	DigitalInput slot2 = new DigitalInput(3);
 	DigitalInput slot3 = new DigitalInput(4);
 	
 	DriverStation matchInfo = DriverStation.getInstance(); //Object to get switch/scale colors
@@ -77,7 +77,7 @@ public class Robot extends IterativeRobot {
 		new Compressor().start();
 		cubeLift.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.setInverted(true);//TODO invert if the PID doesn't work
-		lift2.set(ControlMode.Follower, 1);//TODO check device ID
+		lift2.set(ControlMode.Follower, 1);
 		
 		left.setInverted(true);
 		right.setInverted(true);
@@ -242,7 +242,7 @@ public class Robot extends IterativeRobot {
 			shift.set(in); //Set the transmission piston to in (low gear)
 		}
 		
-		if(joy1.getRawButton(12)) {
+		if(joy1.getRawButtonReleased(12)) {
 			driveEnc.reset();
 		}
 		
