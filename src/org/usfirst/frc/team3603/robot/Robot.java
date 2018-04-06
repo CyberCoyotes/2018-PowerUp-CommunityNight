@@ -46,9 +46,7 @@ public class Robot extends IterativeRobot {
 	
 	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //Arm angle encoder
 	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //Encoder for the cube lift
-	MyEncoder driveEnc = new MyEncoder(left2, false, lowGear);//TODO test, talon
-	DigitalInput highSwitch = new DigitalInput(5);
-	DigitalInput lowSwitch = new DigitalInput(6);
+	MyEncoder driveEnc = new MyEncoder(left1, true, lowGear);//TODO test, talon
 	
 	PressureSensor pressure = new PressureSensor(0); //Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
@@ -65,16 +63,16 @@ public class Robot extends IterativeRobot {
 
 	AutonType autonMode; //Enumerator for the autonomous mode
 	int step; //The auton step
-	final static double scaleStartHeight = 15000;//Double for scale encoder position
-	final static double switchHeight = 12000;//Double for the switch encoder position
-	final static double lowGear = (4*Math.PI)/(9.07*4096);//TODO check these and scale with wheel circumference
-	final static double highGear= (4*Math.PI)/(19.61*4096);
+	final static double scaleStartHeight = -15000;//Double for scale encoder position
+	final static double switchHeight = -12000;//Double for the switch encoder position
+	final static double lowGear = Math.PI*4/30680;//TODO check these and scale with wheel circumference
+	final static double highGear= lowGear;
 	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
 	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
-	
+	Compressor compressor = new Compressor();
 	@Override
 	public void robotInit() {
-		new Compressor().start();
+		compressor.start();
 		cubeLift.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.setInverted(true);//TODO invert if the PID doesn't work
 		lift2.set(ControlMode.Follower, 1);
@@ -89,7 +87,7 @@ public class Robot extends IterativeRobot {
 		liftPID.setOutputRange(-0.7, 0.7); //Set the range of speeds for the lift PID
 		armPID.setOutputRange(-0.5, 0.5); //Set the range of speeds for the arm PID
 		liftEnc.reset(); //Zero out the lift 
-		
+		driveEnc.reset();
 	}
 	
 	@Override
@@ -100,7 +98,7 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousInit() {
 		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
-		
+		liftPID.setOutputRange(-0.3, 0.3);
 		int position;
 		if(slot1.get()) { //Logic to find the auton rotating switch position
 			position = 1;
@@ -213,13 +211,18 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void teleopInit() {
 		armPID.setSetpoint(armEnc.get());
-		liftPID.setSetpoint(liftPID.get());
+		liftPID.setSetpoint(liftEnc.get());
+		liftPID.setOutputRange(-0.7, 0.7);
+		liftPID.disable();
 		shift.set(in);
 		strPID.disable();
     	driveEnc.reset();
+    	compressor.start();
 	}
 	
 	boolean pistonBool = false;
+	boolean manual = true;
+	boolean doOnce = false;
 	
 	@Override
 	public void teleopPeriodic() {
@@ -261,20 +264,14 @@ public class Robot extends IterativeRobot {
 			grabber.set(in);
 		}
 		
-		if(highSwitch.get()) {
-			System.out.println("working22");
-			if(Math.abs(joy2.getRawAxis(1)) > 0.15) {
-				liftPID.disable();
-				cubeLift.set(joy2.getRawAxis(1));
-				liftPID.setSetpoint(liftEnc.get());
-				System.out.println("working");
-			} else {
-				liftPID.enable();
-			}
-		} else {
-			liftPID.disable();
-			cubeLift.set(0);
+		if(Math.abs(joy2.getRawAxis(1)) >= 0.1) { //If axis 1 is off-center...
+			liftPID.reset();//Reset the liftPID
+			cubeLift.set(joy2.getRawAxis(1)*3/4);//Set the lift speed to the axis reading
+			liftPID.setSetpoint(liftEnc.get());//Set the l
+		} else {//If nothing is being pressed...
+			liftPID.enable();
 		}
+		
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
@@ -290,8 +287,8 @@ public class Robot extends IterativeRobot {
 			leftHolder.set(0.85); //Input cube
 			rightHolder.set(0.85);
 		} else if(Math.abs(joy2.getRawAxis(3)) >= 0.25) { //If right trigger is pulled...
-			leftHolder.set(-0.45);//Soft spit
-			rightHolder.set(-0.45);
+			leftHolder.set(-0.35);//Soft spit
+			rightHolder.set(-0.35);
 		} else if(joy2.getRawButton(5)) { //If left bumper is pressed...
 			leftHolder.set(-0.75); // Rotate cube
 			rightHolder.set(0.75);
@@ -320,9 +317,6 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("STRAIGHT PID", strPID.get());
 		SmartDashboard.putNumber("Gyro", gyro.getAngle());
 		SmartDashboard.putNumber("Drive distance", driveEnc.get());
-		
-		SmartDashboard.putBoolean("Top switch", !highSwitch.get());
-		SmartDashboard.putBoolean("Bottom switch", !lowSwitch.get());
 		
 		SmartDashboard.putNumber("Axis 1", joy2.getRawAxis(1));
 		
@@ -412,9 +406,12 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 2:
-			leftHolder.set(-0.35);//Output the cube
-			rightHolder.set(-0.35);
-			strPID.disable();
+			if(liftEnc.get() > -10000) {
+			} else {
+				leftHolder.set(-0.3);//Output the cube
+				rightHolder.set(-0.3);
+				strPID.disable();
+			}
 			break;
 		}
 	}
@@ -442,7 +439,7 @@ public class Robot extends IterativeRobot {
 				mainDrive.arcadeDrive(0, 0);//Stop
 				step = 2;//Set the step to 2
 				strPID.disable();
-				liftPID.setSetpoint(24000);//TODO check this /Set the lift setpoint to max height
+				liftPID.setSetpoint(-24000);//TODO check this /Set the lift setpoint to max height
 			}
 			break;
 		case 2://Step 2
@@ -454,7 +451,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 3://Step 3 TODO change to limit switch
-			if(liftEnc.get() < 23000) {//Wait until the lift is up
+			if(liftEnc.get() > -23000) {//Wait until the lift is up
 			} else {
 				leftHolder.set(-0.75);
 				rightHolder.set(-0.75);
@@ -478,7 +475,7 @@ public class Robot extends IterativeRobot {
 				mainDrive.arcadeDrive(0, 0);//Stop
 				step = 2;//go to step 2
 				strPID.disable();
-				liftPID.setSetpoint(24000);//TODO check this /Set the lift pid setpoint to max
+				liftPID.setSetpoint(-24000);//TODO check this /Set the lift pid setpoint to max
 			}
 			break;
 		case 2://Step 2
@@ -491,7 +488,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 3:
-			if(liftEnc.get() < 23000) {//dont output the cube until the lift is up
+			if(liftEnc.get() > -23000) {//dont output the cube until the lift is up
 			} else {
 				leftHolder.set(-0.75);
 				rightHolder.set(-0.75);
