@@ -81,6 +81,7 @@ public class Robot extends IterativeRobot {
 		
 		left.setInverted(true);
 		right.setInverted(true);
+		rightHolder.setInverted(true);
 		
 		cubeLift.getSensorCollection();//TODO remove?
 		mainDrive.setSafetyEnabled(false); //Disable safety
@@ -219,6 +220,8 @@ public class Robot extends IterativeRobot {
     	driveEnc.reset();
 	}
 	
+	boolean pistonBool = false;
+	
 	@Override
 	public void teleopPeriodic() {
 		release.set(0.5);
@@ -250,31 +253,39 @@ public class Robot extends IterativeRobot {
 		/***************
 		 * MANIPULATOR *
 		 ***************/
+		if(joy2.getRawButtonPressed(1)) {
+			pistonBool = !pistonBool;
+		}
+		if(pistonBool) {
+			grabber.set(out);
+		} else {
+			grabber.set(in);
+		}
 		
-		if(highSwitch.get() && lowSwitch.get() && Math.abs(joy2.getRawAxis(1)) > 0.15) {
+		if(highSwitch.get()) {
+			System.out.println("working22");
+			if(Math.abs(joy2.getRawAxis(1)) > 0.15) {
+				liftPID.disable();
+				cubeLift.set(joy2.getRawAxis(1));
+				liftPID.setSetpoint(liftEnc.get());
+				System.out.println("working");
+			} else {
+				liftPID.enable();
+			}
+		}
+		/*
+		if(highSwitch.get() && Math.abs(joy2.getRawAxis(1)) > 0.15) {
 			liftPID.disable();
 			cubeLift.set(joy2.getRawAxis(1));
 			liftPID.setSetpoint(liftEnc.get());
+			/*
 		} else if(!highSwitch.get()) {
 			if(liftPID.get() < 0) {
 				liftPID.disable();
 				cubeLift.set(0);
-			} else if(Math.abs(joy2.getRawAxis(1)) <= 0.15) {
+			} else if(joy2.getRawAxis(1) <= 0.15) {
 				cubeLift.set(0);
-			} else if(Math.abs(joy2.getRawAxis(1)) >= 0.15) {
-				liftPID.disable();
-				cubeLift.set(joy2.getRawAxis(1));
-				liftPID.setSetpoint(liftEnc.get());
-			} else if(liftPID.get() >= 0) {
-				liftPID.enable();
-			}
-		} else if(!lowSwitch.get()) {
-			if(liftPID.get() > 0) {
-				liftPID.disable();
-				cubeLift.set(0);
-			} else if(Math.abs(joy2.getRawAxis(1)) >= -0.15) {
-				cubeLift.set(0);
-			} else if(Math.abs(joy2.getRawAxis(1)) <= -0.15) {
+			} else if(joy2.getRawAxis(1) >= 0.15) {
 				liftPID.disable();
 				cubeLift.set(joy2.getRawAxis(1));
 				liftPID.setSetpoint(liftEnc.get());
@@ -284,6 +295,7 @@ public class Robot extends IterativeRobot {
 		} else {
 			liftPID.enable();
 		}
+		*/
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
@@ -298,27 +310,21 @@ public class Robot extends IterativeRobot {
 		if(Math.abs(joy2.getRawAxis(2)) >= 0.25) { //If the left trigger is pulled...
 			leftHolder.set(0.85); //Input cube
 			rightHolder.set(0.85);
-			grabber.set(out);
 		} else if(Math.abs(joy2.getRawAxis(3)) >= 0.25) { //If right trigger is pulled...
 			leftHolder.set(-0.45);//Soft spit
 			rightHolder.set(-0.45);
-			grabber.set(out);
 		} else if(joy2.getRawButton(5)) { //If left bumper is pressed...
 			leftHolder.set(-0.75); // Rotate cube
 			rightHolder.set(0.75);
-			grabber.set(in);
 		} else if(joy2.getRawButton(6)) { //If right bumper is pressed...
 			leftHolder.set(0.75); // Rotate cube
 			rightHolder.set(-0.75);
-			grabber.set(in);
 		} else if(joy2.getRawButton(4)){ //If the Y button is pressed...
 			leftHolder.set(-0.75);//Hard spit
 			rightHolder.set(-0.75);
-			grabber.set(out);
 		} else {
 			leftHolder.set(0);
 			rightHolder.set(0);
-			grabber.set(in);
 		}
 		
 		read();//Read from sensors
@@ -338,6 +344,8 @@ public class Robot extends IterativeRobot {
 		
 		SmartDashboard.putBoolean("Top switch", !highSwitch.get());
 		SmartDashboard.putBoolean("Bottom switch", !lowSwitch.get());
+		
+		SmartDashboard.putNumber("Axis 1", joy2.getRawAxis(1));
 		
 		SmartDashboard.putBoolean("Slot 1", slot1.get());
 		SmartDashboard.putBoolean("Slot 2", slot2.get());
