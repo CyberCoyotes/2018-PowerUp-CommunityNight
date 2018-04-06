@@ -97,7 +97,6 @@ public class Robot extends IterativeRobot {
 		read();
 	}
 	
-	
 	@Override
 	public void autonomousInit() {
 		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
@@ -272,30 +271,10 @@ public class Robot extends IterativeRobot {
 			} else {
 				liftPID.enable();
 			}
-		}
-		/*
-		if(highSwitch.get() && Math.abs(joy2.getRawAxis(1)) > 0.15) {
-			liftPID.disable();
-			cubeLift.set(joy2.getRawAxis(1));
-			liftPID.setSetpoint(liftEnc.get());
-			/*
-		} else if(!highSwitch.get()) {
-			if(liftPID.get() < 0) {
-				liftPID.disable();
-				cubeLift.set(0);
-			} else if(joy2.getRawAxis(1) <= 0.15) {
-				cubeLift.set(0);
-			} else if(joy2.getRawAxis(1) >= 0.15) {
-				liftPID.disable();
-				cubeLift.set(joy2.getRawAxis(1));
-				liftPID.setSetpoint(liftEnc.get());
-			} else if(liftPID.get() >= 0) {
-				liftPID.enable();
-			}
 		} else {
-			liftPID.enable();
+			liftPID.disable();
+			cubeLift.set(0);
 		}
-		*/
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
