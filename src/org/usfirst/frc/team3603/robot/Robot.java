@@ -58,6 +58,8 @@ public class Robot extends IterativeRobot {
 	DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
 	DigitalInput slot2 = new DigitalInput(3);
 	DigitalInput slot3 = new DigitalInput(4);
+	DigitalInput highSwitch = new DigitalInput(5);
+	DigitalInput lowSwitch = new DigitalInput(6);
 	
 	DriverStation matchInfo = DriverStation.getInstance(); //Object to get switch/scale colors
 
@@ -98,7 +100,7 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousInit() {
 		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
-		liftPID.setOutputRange(-0.3, 0.3);
+		liftPID.setOutputRange(-0.5, 0.5);
 		int position;
 		if(slot1.get()) { //Logic to find the auton rotating switch position
 			position = 1;
@@ -119,8 +121,8 @@ public class Robot extends IterativeRobot {
 		System.out.println("Sides: " + sides);
 		if(position == 1) { //If we are in position 1...
 			if(sides.equals(LLL)) {//If the switch and scale is on our side...
-				autonMode = AutonType.leftSwitch;//Set the auton mode to the left side of the switch
-				System.out.println("Autonomous mode: left switch");
+				autonMode = AutonType.leftScale;//Set the auton mode to the left side of the switch
+				System.out.println("Autonomous mode: left scale");
 			} else if(sides.equals(RRR)) {//If neither the switch or scale are on our side...
 				autonMode = AutonType.straight; //Cross the auto line
 				System.out.println("Autonomous mode: straight");
@@ -144,8 +146,8 @@ public class Robot extends IterativeRobot {
 				autonMode = AutonType.straight;//Set the auton mode to straight
 				System.out.println("Autonomous mode: straight");
 			} else if(sides.equals(RRR)) {//If both the switch and the scale are on our side...
-				autonMode = AutonType.rightSwitch;//Do the switch
-				System.out.println("Autonomous mode: right switch");
+				autonMode = AutonType.rightScale;//Do the switch
+				System.out.println("Autonomous mode: right scale");
 			} else if(sides.equals(LRL)) {//If only the scale is on our side...
 				autonMode = AutonType.rightScale;//Do the scale
 				System.out.println("Autonomous mode: right scale");
@@ -264,14 +266,39 @@ public class Robot extends IterativeRobot {
 			grabber.set(in);
 		}
 		
-		if(Math.abs(joy2.getRawAxis(1)) >= 0.1) { //If axis 1 is off-center...
+		/**
+		if(!highSwitch.get()) {
+			liftPID.disable();
+			if(joy2.getRawAxis(1) <= -0.15) {
+				cubeLift.set(0);
+			} else {
+				cubeLift.set(joy2.getRawAxis(1));
+				liftPID.setSetpoint(liftEnc.get());
+			}
+		} else if(!lowSwitch.get()) {
+			liftPID.disable();
+			if(joy2.getRawAxis(1) >= 0.15) {
+				cubeLift.set(0);
+			} else {
+				cubeLift.set(joy2.getRawAxis(1));
+				liftPID.setSetpoint(liftEnc.get());
+			}
+		} else if(Math.abs(joy2.getRawAxis(1)) >= 0.15) {
+			liftPID.disable();
+			cubeLift.set(joy2.getRawAxis(1));
+			liftPID.setSetpoint(liftEnc.get());
+		} else {
+			liftPID.enable();
+		}
+		*/
+		
+		if(Math.abs(joy2.getRawAxis(1)) >= 0.15) { //If axis 1 is off-center...
 			liftPID.reset();//Reset the liftPID
 			cubeLift.set(joy2.getRawAxis(1)*3/4);//Set the lift speed to the axis reading
 			liftPID.setSetpoint(liftEnc.get());//Set the l
 		} else {//If nothing is being pressed...
 			liftPID.enable();
 		}
-		
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
 		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
@@ -433,7 +460,7 @@ public class Robot extends IterativeRobot {
 			step = 1;
 			break;
 		case 1:
-			if(driveEnc.get() < 252) {//If the robot has driven less than 252 inches
+			if(driveEnc.get() < 234) {//If the robot has driven less than 252 inches
 				mainDrive.arcadeDrive(0.75, strPID.get()); //Drive forwards at 3/4 speed and drive straight
 			} else {//If the robot has driven further than 252 inches
 				mainDrive.arcadeDrive(0, 0);//Stop
@@ -469,7 +496,7 @@ public class Robot extends IterativeRobot {
 			step = 1;
 			break;
 		case 1:
-			if(driveEnc.get() < 252) {//If the robot has driven less than 252 inches...
+			if(driveEnc.get() < 234) {//If the robot has driven less than 252 inches...
 				mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight
 			} else {//Else
 				mainDrive.arcadeDrive(0, 0);//Stop
@@ -505,7 +532,7 @@ public class Robot extends IterativeRobot {
 			step = 1;
 			break;
 		case 1:
-			if(driveEnc.get() < 149) {//if the robot has driven less than 149 inches...
+			if(driveEnc.get() < 131) {//if the robot has driven less than 149 inches...
 				mainDrive.arcadeDrive(0.75, strPID.get());//drive straight
 			} else {
 				mainDrive.arcadeDrive(0, 0);//stop
@@ -515,7 +542,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 2://step 2
-			if(gyro.getAngle() < 90) {//if the current angle is less than 90 degrees
+			if(gyro.getAngle() < 80) {//if the current angle is less than 90 degrees
 				mainDrive.arcadeDrive(0, 0.6);//turn right
 			} else {//else
 				step = 3;//go to step 3
@@ -533,8 +560,8 @@ public class Robot extends IterativeRobot {
 			break;
 		case 4:
 			cubeLift.set(-liftPID.get());//keep the lift in place
-			leftHolder.set(-0.5);//shoot the cube
-			rightHolder.set(-0.5);
+			leftHolder.set(-0.35);//shoot the cube
+			rightHolder.set(-0.35);
 			break;
 		}
 	}
@@ -547,7 +574,7 @@ public class Robot extends IterativeRobot {
 			step = 1;
 			break;
 		case 1://step 1
-			if(driveEnc.get() < 149) {//if the robot has driven less tham 149 inches...
+			if(driveEnc.get() < 131) {//if the robot has driven less tham 149 inches...
 				mainDrive.arcadeDrive(0.75, strPID.get());//drive straight
 			} else {//else
 				mainDrive.arcadeDrive(0, 0);//stop
@@ -557,7 +584,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 2://step 2
-			if(gyro.getAngle() > -90) {//turn left until -90 degrees
+			if(gyro.getAngle() > -80) {//turn left until -90 degrees
 				mainDrive.arcadeDrive(0, -0.6);
 			} else {
 				step = 3;//go to step 3
@@ -574,8 +601,8 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 4:
-			leftHolder.set(-0.5);//output the cube
-			rightHolder.set(-0.5);
+			leftHolder.set(-0.35);//output the cube
+			rightHolder.set(-0.35);
 			break;
 		}
 	}
