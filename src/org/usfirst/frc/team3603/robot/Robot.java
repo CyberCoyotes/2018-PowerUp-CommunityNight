@@ -155,7 +155,7 @@ public class Robot extends IterativeRobot {
 				autonMode = AutonType.rightSwitch;//Do the switch
 				System.out.println("Autonomous mode: right switch");
 			}
-		} else if(position == 4) {//If the auton switch is in position 4...
+		} else if(position == 4) {//If the auton switch is in position 4....
 			autonMode = AutonType.pos3LeftScale;//Override and drive straight
 			System.out.println("Autonomous mode: Override straight");
 		}
