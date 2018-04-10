@@ -121,7 +121,7 @@ public class Robot extends IterativeRobot {
 		System.out.println("Sides: " + sides);
 		if(position == 1) { //If we are in position 1...
 			if(sides.equals(LLL)) {//If the switch and scale is on our side...
-				autonMode = AutonType.leftScale;//Set the auton mode to the left side of the switch
+				autonMode = AutonType.leftSwitch;//Set the auton mode to the left side of the switch
 				System.out.println("Autonomous mode: left scale");
 			} else if(sides.equals(RRR)) {//If neither the switch or scale are on our side...
 				autonMode = AutonType.straight; //Cross the auto line
@@ -143,10 +143,10 @@ public class Robot extends IterativeRobot {
 			}
 		} else if(position == 3) {//If we are in position 3...
 			if(sides.equals(LLL)) {//If neither the switch or scale is on our side...
-				autonMode = AutonType.straight;//Set the auton mode to straight
+				autonMode = AutonType.pos3LeftScale;//Set the auton mode to straight
 				System.out.println("Autonomous mode: straight");
 			} else if(sides.equals(RRR)) {//If both the switch and the scale are on our side...
-				autonMode = AutonType.rightScale;//Do the switch
+				autonMode = AutonType.rightSwitch;//Do the switch
 				System.out.println("Autonomous mode: right scale");
 			} else if(sides.equals(LRL)) {//If only the scale is on our side...
 				autonMode = AutonType.rightScale;//Do the scale
@@ -156,7 +156,7 @@ public class Robot extends IterativeRobot {
 				System.out.println("Autonomous mode: right switch");
 			}
 		} else if(position == 4) {//If the auton switch is in position 4...
-			autonMode = AutonType.straight;//Override and drive straight
+			autonMode = AutonType.pos3LeftScale;//Override and drive straight
 			System.out.println("Autonomous mode: Override straight");
 		}
 		if(autonMode == null) {
@@ -202,11 +202,77 @@ public class Robot extends IterativeRobot {
 		case leftMiddle:
 			leftMiddle(); //Go to the front left side of the switch
 			break;
+		case pos3LeftScale:
+			pos3LeftScale();
+			break;
 		}
 		if(shift.get() == out) {
 			driveEnc.setMultiplier(highGear);
 		} else {
 			driveEnc.setMultiplier(lowGear);
+		}
+	}
+	
+	void pos3LeftScale() {
+		switch(step) {
+		case 0:
+			step = 1;
+			break;
+		case 1:
+			if(driveEnc.get() < 215) {
+				mainDrive.arcadeDrive(0.75, strPID.get());
+			} else {
+				mainDrive.arcadeDrive(0, 0);
+				strPID.setSetpoint(-90);
+				step = 2;
+			}
+			break;
+		case 2:
+			if(gyro.getAngle() > -90) {
+				mainDrive.arcadeDrive(0, -0.4);
+			} else {
+				liftPID.setSetpoint(scaleStartHeight);
+				liftPID.enable();
+				armPID.enable();
+				mainDrive.arcadeDrive(0, 0);
+				strPID.setSetpoint(-90);
+				driveEnc.reset();
+				step = 3;
+			}
+			break;
+		case 3:
+			if(driveEnc.get() < 168) {
+				mainDrive.arcadeDrive(0.75, strPID.get());
+			} else {
+				liftPID.setSetpoint(-24000);
+				mainDrive.arcadeDrive(0, 0);
+				step = 4;
+			}
+			break;
+		case 4:
+			if(gyro.getAngle() < 0) {
+				mainDrive.arcadeDrive(0, 0.4);
+			} else {
+				mainDrive.arcadeDrive(0, 0);
+				strPID.setSetpoint(0);
+				driveEnc.reset();
+				step = 5;
+			}
+			break;
+		case 5:
+			if(driveEnc.get() < 24) {
+				mainDrive.arcadeDrive(0.3, strPID.get());
+			} else {
+				mainDrive.arcadeDrive(0, 0);
+			}
+			break;
+		case 6:
+			if(liftEnc.get() > -23000) {
+			} else {
+				leftHolder.set(-0.5);
+				rightHolder.set(-0.5);
+			}
+			break;
 		}
 	}
 	
@@ -360,7 +426,7 @@ public class Robot extends IterativeRobot {
 	}
 	
 	enum AutonType {//A list of different auton types
-		rightScale, leftScale, rightSwitch, leftSwitch, straight, rightMiddle, leftMiddle
+		rightScale, leftScale, rightSwitch, leftSwitch, straight, rightMiddle, leftMiddle, pos3LeftScale
 	}
 	
 	void leftMiddle() {
