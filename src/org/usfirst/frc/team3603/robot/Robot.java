@@ -31,7 +31,7 @@ public class Robot extends IterativeRobot {
 	DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 	
 	WPI_TalonSRX leftHolder = new WPI_TalonSRX(9);//Leftholder speedcontroller
-	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//Rightholder speedcontroller
+	WPI_TalonSRX rightHolder = new WPI_TalonSRX(8);//Rightholder speedcontroller 
 	WPI_TalonSRX cubeLift = new WPI_TalonSRX(1); //Cube lift speed controller
 	WPI_TalonSRX lift2 = new WPI_TalonSRX(2);//Second lift controller
 	WPI_TalonSRX arm = new WPI_TalonSRX(7); //Arm speed controller
