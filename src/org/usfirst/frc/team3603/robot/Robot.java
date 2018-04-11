@@ -67,6 +67,7 @@ public class Robot extends IterativeRobot {
 	int step; //The auton step
 	final static double scaleStartHeight = -15000;//Double for scale encoder position
 	final static double switchHeight = -12000;//Double for the switch encoder position
+	final static double scaleFinishHeight = -24000;
 	final static double lowGear = Math.PI*4/30680;//TODO check these and scale with wheel circumference
 	final static double highGear= lowGear;
 	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
@@ -206,11 +207,6 @@ public class Robot extends IterativeRobot {
 			pos3LeftScale();
 			break;
 		}
-		if(shift.get() == out) {
-			driveEnc.setMultiplier(highGear);
-		} else {
-			driveEnc.setMultiplier(lowGear);
-		}
 	}
 	
 	void pos3LeftScale() {
@@ -244,7 +240,7 @@ public class Robot extends IterativeRobot {
 			if(driveEnc.get() < 168) {
 				mainDrive.arcadeDrive(0.75, strPID.get());
 			} else {
-				liftPID.setSetpoint(-24000);
+				liftPID.setSetpoint(scaleFinishHeight);
 				mainDrive.arcadeDrive(0, 0);
 				step = 4;
 			}
@@ -532,7 +528,7 @@ public class Robot extends IterativeRobot {
 				mainDrive.arcadeDrive(0, 0);//Stop
 				step = 2;//Set the step to 2
 				strPID.disable();
-				liftPID.setSetpoint(-24000);//TODO check this /Set the lift setpoint to max height
+				liftPID.setSetpoint(scaleFinishHeight);//TODO check this /Set the lift setpoint to max height
 			}
 			break;
 		case 2://Step 2
@@ -568,7 +564,7 @@ public class Robot extends IterativeRobot {
 				mainDrive.arcadeDrive(0, 0);//Stop
 				step = 2;//go to step 2
 				strPID.disable();
-				liftPID.setSetpoint(-24000);//TODO check this /Set the lift pid setpoint to max
+				liftPID.setSetpoint(scaleFinishHeight);//TODO check this /Set the lift pid setpoint to max
 			}
 			break;
 		case 2://Step 2
