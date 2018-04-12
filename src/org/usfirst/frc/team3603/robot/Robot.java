@@ -256,7 +256,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 5:
-			if(driveEnc.get() < 24) {
+			if(driveEnc.get() < 36) {
 				mainDrive.arcadeDrive(0.3, strPID.get());
 			} else {
 				mainDrive.arcadeDrive(0, 0);
