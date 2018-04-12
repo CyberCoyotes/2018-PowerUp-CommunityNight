@@ -53,7 +53,7 @@ public class Robot extends IterativeRobot {
 	
 	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
 	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, cubeLift); //PID controller for lift
-	PIDController armPID = new PIDController(0.05, 0, 0, armEnc, arm); //PID controller for arm
+	PIDController armPID = new PIDController(0.08, 0, 0, armEnc, arm); //PID controller for arm
 	
 	DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
 	DigitalInput slot2 = new DigitalInput(3);
@@ -144,7 +144,7 @@ public class Robot extends IterativeRobot {
 			}
 		} else if(position == 3) {//If we are in position 3...
 			if(sides.equals(LLL)) {//If neither the switch or scale is on our side...
-				autonMode = AutonType.pos3LeftScale;//Set the auton mode to straight
+				autonMode = AutonType.straight;//Set the auton mode to straight
 				System.out.println("Autonomous mode: straight");
 			} else if(sides.equals(RRR)) {//If both the switch and the scale are on our side...
 				autonMode = AutonType.rightSwitch;//Do the switch
@@ -363,7 +363,7 @@ public class Robot extends IterativeRobot {
 		}
 		
 		//TODO if stuttering is too much, switch to a setpoint change instead of manual override
-		if(Math.abs(joy2.getRawAxis(5)) >= 0.1) { //If axis 5 is off-center...
+		if(Math.abs(joy2.getRawAxis(5)) >= 0.15) { //If axis 5 is off-center...
 			armPID.disable();
 			arm.set(joy2.getRawAxis(5));//Set the arm motor to the axis reading
 			armPID.setSetpoint(armEnc.get());//Set the armPID setpoint to the current encoder reading
