@@ -69,7 +69,7 @@ public class Robot extends IterativeRobot {
 	final static double switchHeight = -12000;//Double for the switch encoder position
 	final static double scaleFinishHeight = -24000;
 	final static double lowGear = Math.PI*4/30680;//TODO check these and scale with wheel circumference
-	final static double highGear= lowGear;
+	final static double highGear= lowGear; 
 	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
 	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
 	Compressor compressor = new Compressor();
