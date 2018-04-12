@@ -51,7 +51,7 @@ public class Robot extends IterativeRobot {
 	PressureSensor pressure = new PressureSensor(0); //Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
 	
-	PIDController strPID = new PIDController(0.15, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
+	PIDController strPID = new PIDController(0.05, 0, 0, gyro, new Spark(7)); //PID controller for driving straight
 	PIDController liftPID = new PIDController(0.001, 0, 0, liftEnc, cubeLift); //PID controller for lift
 	PIDController armPID = new PIDController(0.08, 0, 0, armEnc, arm); //PID controller for arm
 	
@@ -66,7 +66,7 @@ public class Robot extends IterativeRobot {
 	AutonType autonMode; //Enumerator for the autonomous mode
 	int step; //The auton step
 	final static double scaleStartHeight = -15000;//Double for scale encoder position
-	final static double switchHeight = -12000;//Double for the switch encoder position
+	final static double switchHeight = -10000;//Double for the switch encoder position
 	final static double scaleFinishHeight = -24000;
 	final static double lowGear = Math.PI*4/30680;//TODO check these and scale with wheel circumference
 	final static double highGear= lowGear; 
@@ -157,7 +157,13 @@ public class Robot extends IterativeRobot {
 				System.out.println("Autonomous mode: right switch");
 			}
 		} else if(position == 4) {//If the auton switch is in position 4....
-			autonMode = AutonType.pos3LeftScale;//Override and drive straight
+			if(sides.equals(LLL) || sides.equals(RLR)) {
+				autonMode = AutonType.pos3LeftScale;
+				System.out.println("Autonomous mode: position 3 left scale");
+			} else {
+				autonMode = AutonType.rightScale;
+				System.out.println("Autonomous mode: right scale");
+			}
 			System.out.println("Autonomous mode: Override straight");
 		}
 		if(autonMode == null) {
@@ -213,9 +219,11 @@ public class Robot extends IterativeRobot {
 		switch(step) {
 		case 0:
 			step = 1;
+			armPID.setSetpoint(armEnc.get());
+			armPID.enable();
 			break;
 		case 1:
-			if(driveEnc.get() < 215) {
+			if(driveEnc.get() < 205) {
 				mainDrive.arcadeDrive(0.75, strPID.get());
 			} else {
 				mainDrive.arcadeDrive(0, 0);
@@ -225,29 +233,31 @@ public class Robot extends IterativeRobot {
 			break;
 		case 2:
 			if(gyro.getAngle() > -90) {
-				mainDrive.arcadeDrive(0, -0.4);
+				mainDrive.arcadeDrive(0, -0.65);
 			} else {
 				liftPID.setSetpoint(scaleStartHeight);
 				liftPID.enable();
+				armPID.setSetpoint(75);
 				armPID.enable();
 				mainDrive.arcadeDrive(0, 0);
 				strPID.setSetpoint(-90);
 				driveEnc.reset();
+				strPID.enable();
 				step = 3;
 			}
 			break;
 		case 3:
-			if(driveEnc.get() < 168) {
+			if(driveEnc.get() < 180) {
 				mainDrive.arcadeDrive(0.75, strPID.get());
 			} else {
-				liftPID.setSetpoint(scaleFinishHeight);
+				liftPID.setSetpoint(-28000);
 				mainDrive.arcadeDrive(0, 0);
 				step = 4;
 			}
 			break;
 		case 4:
 			if(gyro.getAngle() < 0) {
-				mainDrive.arcadeDrive(0, 0.4);
+				mainDrive.arcadeDrive(0, 0.75);
 			} else {
 				mainDrive.arcadeDrive(0, 0);
 				strPID.setSetpoint(0);
@@ -256,14 +266,16 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 5:
-			if(driveEnc.get() < 36) {
-				mainDrive.arcadeDrive(0.3, strPID.get());
+			if(driveEnc.get() < 24) {
+				mainDrive.arcadeDrive(0.75, strPID.get());
 			} else {
 				mainDrive.arcadeDrive(0, 0);
+				step = 6;
 			}
 			break;
 		case 6:
-			if(liftEnc.get() > -23000) {
+			if(liftEnc.get() > -26000) {
+
 			} else {
 				leftHolder.set(-0.5);
 				rightHolder.set(-0.5);
@@ -298,7 +310,7 @@ public class Robot extends IterativeRobot {
 		
 		double sense = -0.5 * joy1.getRawAxis(3) + 0.5;//Sensitivity coefficient
 		double y = -Math.pow(joy1.getRawAxis(1), 1); //Double to store the joystick's y axis
-		double rot = Math.pow(joy1.getRawAxis(2), 1)/1.25; //Double to store the joystick's x axis
+		double rot = Math.pow(joy1.getRawAxis(2), 1)*(9.0/10.0); //Double to store the joystick's x axis
 		if(Math.abs(y) >= 0.05 || Math.abs(rot) >= 0.05 && !joy1.getRawButton(1)) { //Thresholding function
 			mainDrive.arcadeDrive(y * sense, rot * sense); //Arcade drive with the joystick's axis
 		} else {
@@ -444,7 +456,7 @@ public class Robot extends IterativeRobot {
 			break;
 		case 2://Step 2 of the left middle auton
 			if(gyro.getAngle() > -60) {//If the current angle is greater than -60
-				mainDrive.arcadeDrive(0, -0.4);//Slowly turn left
+				mainDrive.arcadeDrive(0, -0.6);//Slowly turn left
 			} else { //If it has reached the -60 degree mark...
 				mainDrive.arcadeDrive(0, 0);//Stop
 				strPID.setSetpoint(-60);//Set the straightPID setpoint to -60
@@ -465,7 +477,7 @@ public class Robot extends IterativeRobot {
 			break;
 		case 4://Step 4
 			if(gyro.getAngle() < 0) {//If the current gyro angle is less than 0...
-				mainDrive.arcadeDrive(0, 0.4);//Slowly turn right
+				mainDrive.arcadeDrive(0, 0.6);//Slowly turn right
 			} else {//If it has completely turned 60 degrees...
 				mainDrive.arcadeDrive(0, 0);//Stop
 				step = 5;//Set the step to 5
@@ -506,10 +518,19 @@ public class Robot extends IterativeRobot {
 	}
 	
 	void straight() {//Auton the drive straight
-		if(driveEnc.get() < 83) {//TODO Check /If the robot has driven less than 83 inches...
-			mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight at -3/4 speed
-		} else {//Else
-			mainDrive.arcadeDrive(0, 0);//Stop
+		switch(step) {
+		case 0:
+			armPID.setSetpoint(armEnc.get());
+			armPID.enable();
+			step = 1;
+			break;
+		case 1:
+			if(driveEnc.get() < 83) {//TODO Check /If the robot has driven less than 83 inches...
+				mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight at -3/4 speed
+			} else {//Else
+				mainDrive.arcadeDrive(0, 0);//Stop
+			}
+			break;
 		}
 	}
 	
@@ -533,7 +554,7 @@ public class Robot extends IterativeRobot {
 			break;
 		case 2://Step 2
 			if(gyro.getAngle() > -45) {//If the current gyro angle is greater than -35 degrees
-				mainDrive.arcadeDrive(0, -0.4);//Turn left
+				mainDrive.arcadeDrive(0, -0.6);//Turn left
 			} else {//Else
 				step = 3;//Set the step to 3
 				mainDrive.arcadeDrive(0, 0);//Stop
@@ -544,6 +565,17 @@ public class Robot extends IterativeRobot {
 			} else {
 				leftHolder.set(-0.75);
 				rightHolder.set(-0.75);
+				driveEnc.reset();
+				step = 4;
+			}
+			break;
+		case 4:
+			if(driveEnc.get() > -12) {
+				mainDrive.arcadeDrive(-0.7, 0);
+				leftHolder.set(-0.75);
+				rightHolder.set(-0.75);
+			} else {
+				mainDrive.arcadeDrive(0, 0);
 			}
 			break;
 		}
@@ -569,18 +601,29 @@ public class Robot extends IterativeRobot {
 			break;
 		case 2://Step 2
 			if(gyro.getAngle() < 45) {//If the current gyro angle is less than 45 degrees
-				mainDrive.arcadeDrive(0, 0.4);//Turn right
+				mainDrive.arcadeDrive(0, 0.6);//Turn right
 			} else {
 				step = 3;//go to step 3
 				driveEnc.reset();//reset the touchless encoder
 				mainDrive.arcadeDrive(0, 0);//stop
 			}
 			break;
-		case 3:
-			if(liftEnc.get() > -23000) {//dont output the cube until the lift is up
+		case 3://Step 3 TODO change to limit switch
+			if(liftEnc.get() > -23000) {//Wait until the lift is up
 			} else {
 				leftHolder.set(-0.75);
 				rightHolder.set(-0.75);
+				driveEnc.reset();
+				step = 4;
+			}
+			break;
+		case 4:
+			if(driveEnc.get() > -12) {
+				mainDrive.arcadeDrive(-0.7, 0);
+				leftHolder.set(-0.75);
+				rightHolder.set(-0.75);
+			} else {
+				mainDrive.arcadeDrive(0, 0);
 			}
 			break;
 		}
