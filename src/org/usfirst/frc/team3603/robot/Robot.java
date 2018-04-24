@@ -388,8 +388,8 @@ public class Robot extends IterativeRobot {
 			leftHolder.set(0.85); //Input cube
 			rightHolder.set(0.85);
 		} else if(Math.abs(joy2.getRawAxis(3)) >= 0.25) { //If right trigger is pulled...
-			leftHolder.set(-0.35);//Soft spit
-			rightHolder.set(-0.35);
+			leftHolder.set(-0.25);//Soft spit
+			rightHolder.set(-0.25);
 		} else if(joy2.getRawButton(5)) { //If left bumper is pressed...
 			leftHolder.set(-0.75); // Rotate cube
 			rightHolder.set(0.75);
@@ -507,7 +507,7 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case 2:
-			if(liftEnc.get() > -10000) {
+			if(liftEnc.get() > -9000) {
 			} else {
 				leftHolder.set(-0.3);//Output the cube
 				rightHolder.set(-0.3);
