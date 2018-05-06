@@ -46,7 +46,6 @@ public class Robot extends IterativeRobot {
 	
 	Encoder armEnc = new Encoder(0, 1, false, EncodingType.k2X); //Arm angle encoder
 	MyEncoder liftEnc = new MyEncoder(cubeLift, false, 1.0); //Encoder for the cube lift
-	MyEncoder driveEnc = new MyEncoder(left1, true, lowGear);//TODO test, talon
 	
 	PressureSensor pressure = new PressureSensor(0); //Pressure sensor
 	AHRS gyro = new AHRS(Port.kMXP); //NavX
@@ -63,13 +62,6 @@ public class Robot extends IterativeRobot {
 	
 	DriverStation matchInfo = DriverStation.getInstance(); //Object to get switch/scale colors
 
-	AutonType autonMode; //Enumerator for the autonomous mode
-	int step; //The auton step
-	final static double scaleStartHeight = -15000;//Double for scale encoder position
-	final static double switchHeight = -10000;//Double for the switch encoder position
-	final static double scaleFinishHeight = -24000;
-	final static double lowGear = Math.PI*4/30680;//TODO check these and scale with wheel circumference
-	final static double highGear= lowGear; 
 	final static DoubleSolenoid.Value out = DoubleSolenoid.Value.kForward; //Piston out value
 	final static DoubleSolenoid.Value in = DoubleSolenoid.Value.kReverse; //Piston in value
 	Compressor compressor = new Compressor();
@@ -90,7 +82,6 @@ public class Robot extends IterativeRobot {
 		liftPID.setOutputRange(-0.7, 0.7); //Set the range of speeds for the lift PID
 		armPID.setOutputRange(-0.5, 0.5); //Set the range of speeds for the arm PID
 		liftEnc.reset(); //Zero out the lift 
-		driveEnc.reset();
 	}
 	
 	@Override
@@ -100,188 +91,10 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void autonomousInit() {
-		String sides = matchInfo.getGameSpecificMessage(); //Get the switch and scale colors
-		liftPID.setOutputRange(-0.5, 0.5);
-		int position;
-		if(slot1.get()) { //Logic to find the auton rotating switch position
-			position = 1;
-		} else if(slot2.get()) {
-			position = 2;
-		} else if(slot3.get()) {
-			position = 3;
-		} else {
-			position = 4;
-		}
-		
-		String LRL = "LRL";
-		String RLR = "RLR";
-		String LLL = "LLL";
-		String RRR = "RRR";
-		
-		System.out.println("Position: " + position);
-		System.out.println("Sides: " + sides);
-		if(position == 1) { //If we are in position 1...
-			if(sides.equals(LLL)) {//If the switch and scale is on our side...
-				autonMode = AutonType.leftSwitch;//Set the auton mode to the left side of the switch
-				System.out.println("Autonomous mode: left scale");
-			} else if(sides.equals(RRR)) {//If neither the switch or scale are on our side...
-				autonMode = AutonType.straight; //Cross the auto line
-				System.out.println("Autonomous mode: straight");
-			} else if(sides.equals(LRL)) {//If only the switch is on our side...
-				autonMode = AutonType.leftSwitch;//Set the auton mode to the left side of the switch
-				System.out.println("Autonomous mode: left switch");
-			} else if(sides.equals(RLR)) {//If only the scale is on our side...
-				autonMode = AutonType.leftScale;//Set the auton mode to the left scale
-				System.out.println("Autonomous mode: left scale");
-			}
-		} else if(position == 2) { //If we are in position 2...
-			if(sides.equals(LLL) || sides.equals(LRL)) {//If the switch is on the left...
-				autonMode = AutonType.leftMiddle;//Set the auton mode to left middle
-				System.out.println("Autonomous mode: middle left");
-			} else if(sides.equals(RLR) || sides.equals(RRR)) {//If the switch is on the right side...
-				autonMode = AutonType.rightMiddle;//Set the auton mode to right middle
-				System.out.println("Autonomous mode: middle right");
-			}
-		} else if(position == 3) {//If we are in position 3...
-			if(sides.equals(LLL)) {//If neither the switch or scale is on our side...
-				autonMode = AutonType.straight;//Set the auton mode to straight
-				System.out.println("Autonomous mode: straight");
-			} else if(sides.equals(RRR)) {//If both the switch and the scale are on our side...
-				autonMode = AutonType.rightSwitch;//Do the switch
-				System.out.println("Autonomous mode: right scale");
-			} else if(sides.equals(LRL)) {//If only the scale is on our side...
-				autonMode = AutonType.rightScale;//Do the scale
-				System.out.println("Autonomous mode: right scale");
-			} else if(sides.equals(RLR)) {//If only the switch is on our side...
-				autonMode = AutonType.rightSwitch;//Do the switch
-				System.out.println("Autonomous mode: right switch");
-			}
-		} else if(position == 4) {//If the auton switch is in position 4....
-			if(sides.equals(LLL) || sides.equals(RLR)) {
-				autonMode = AutonType.pos3LeftScale;
-				System.out.println("Autonomous mode: position 3 left scale");
-			} else {
-				autonMode = AutonType.rightScale;
-				System.out.println("Autonomous mode: right scale");
-			}
-			System.out.println("Autonomous mode: Override straight");
-		}
-		if(autonMode == null) {
-			autonMode = AutonType.straight;
-			System.out.println("ERROR: autonMode is null. Defaulting to cross auto line.");
-		}
-		
-		strPID.setSetpoint(0); //Set the setpoint of the drive straight PID to 0 degrees
-		armPID.setSetpoint(75);
-		gyro.reset(); //Set the gyro angle to 0
-		driveEnc.reset(); //Set the touchless encoder to 0
-		armEnc.reset();
-		armEnc.reset();//Reset the arm encoder
-		strPID.enable();
-		shift.set(out);
-		step = 0; //set the auton step to step 0
 	}//TODO add pneumatics
 	
 	@Override
 	public void autonomousPeriodic() {
-		release.set(0.5);//Release the arm by raising the servo
-		
-		read();//Read from sensors and put the info on the smart dashboard
-		switch(autonMode) {
-		case straight:
-			straight(); //Drive straight for auton
-			break;
-		case leftSwitch:
-			leftSwitch(); //Go to the left side of the switch 
-			break;
-		case rightSwitch:
-			rightSwitch(); //Go to the right side of the switch
-			break;
-		case leftScale:
-			leftScale(); //Go to the left side of the scale
-			break;
-		case rightScale:
-			rightScale(); //Go to the right side of the scale
-			break;
-		case rightMiddle:
-			rightMiddle(); //Go to the front right side of the switch
-			break;
-		case leftMiddle:
-			leftMiddle(); //Go to the front left side of the switch
-			break;
-		case pos3LeftScale:
-			pos3LeftScale();
-			break;
-		}
-	}
-	
-	void pos3LeftScale() {
-		switch(step) {
-		case 0:
-			step = 1;
-			armPID.setSetpoint(armEnc.get());
-			armPID.enable();
-			break;
-		case 1:
-			if(driveEnc.get() < 205) {
-				mainDrive.arcadeDrive(0.75, strPID.get());
-			} else {
-				mainDrive.arcadeDrive(0, 0);
-				strPID.setSetpoint(-90);
-				step = 2;
-			}
-			break;
-		case 2:
-			if(gyro.getAngle() > -90) {
-				mainDrive.arcadeDrive(0, -0.65);
-			} else {
-				liftPID.setSetpoint(scaleStartHeight);
-				liftPID.enable();
-				armPID.setSetpoint(75);
-				armPID.enable();
-				mainDrive.arcadeDrive(0, 0);
-				strPID.setSetpoint(-90);
-				driveEnc.reset();
-				strPID.enable();
-				step = 3;
-			}
-			break;
-		case 3:
-			if(driveEnc.get() < 180) {
-				mainDrive.arcadeDrive(0.75, strPID.get());
-			} else {
-				liftPID.setSetpoint(-28000);
-				mainDrive.arcadeDrive(0, 0);
-				step = 4;
-			}
-			break;
-		case 4:
-			if(gyro.getAngle() < 0) {
-				mainDrive.arcadeDrive(0, 0.75);
-			} else {
-				mainDrive.arcadeDrive(0, 0);
-				strPID.setSetpoint(0);
-				driveEnc.reset();
-				step = 5;
-			}
-			break;
-		case 5:
-			if(driveEnc.get() < 24) {
-				mainDrive.arcadeDrive(0.75, strPID.get());
-			} else {
-				mainDrive.arcadeDrive(0, 0);
-				step = 6;
-			}
-			break;
-		case 6:
-			if(liftEnc.get() > -26000) {
-
-			} else {
-				leftHolder.set(-0.5);
-				rightHolder.set(-0.5);
-			}
-			break;
-		}
 	}
 	
 	@Override
@@ -292,7 +105,6 @@ public class Robot extends IterativeRobot {
 		liftPID.disable();
 		shift.set(in);
 		strPID.disable();
-    	driveEnc.reset();
     	compressor.start();
 	}
 	
@@ -323,10 +135,6 @@ public class Robot extends IterativeRobot {
 			shift.set(in); //Set the transmission piston to in (low gear)
 		}
 		
-		if(joy1.getRawButtonReleased(12)) {
-			driveEnc.reset();
-		}
-		
 		
 		/***************
 		 * MANIPULATOR *
@@ -340,35 +148,9 @@ public class Robot extends IterativeRobot {
 			grabber.set(in);
 		}
 		
-		/**
-		if(!highSwitch.get()) {
-			liftPID.disable();
-			if(joy2.getRawAxis(1) <= -0.15) {
-				cubeLift.set(0);
-			} else {
-				cubeLift.set(joy2.getRawAxis(1));
-				liftPID.setSetpoint(liftEnc.get());
-			}
-		} else if(!lowSwitch.get()) {
-			liftPID.disable();
-			if(joy2.getRawAxis(1) >= 0.15) {
-				cubeLift.set(0);
-			} else {
-				cubeLift.set(joy2.getRawAxis(1));
-				liftPID.setSetpoint(liftEnc.get());
-			}
-		} else if(Math.abs(joy2.getRawAxis(1)) >= 0.15) {
-			liftPID.disable();
-			cubeLift.set(joy2.getRawAxis(1));
-			liftPID.setSetpoint(liftEnc.get());
-		} else {
-			liftPID.enable();
-		}
-		*/
-		
 		if(Math.abs(joy2.getRawAxis(1)) >= 0.15) { //If axis 1 is off-center...
 			liftPID.reset();//Reset the liftPID
-			cubeLift.set(joy2.getRawAxis(1)*3/4);//Set the lift speed to the axis reading
+			cubeLift.set(joy2.getRawAxis(1)/2);//Set the lift speed to the axis reading
 			liftPID.setSetpoint(liftEnc.get());//Set the l
 		} else {//If nothing is being pressed...
 			liftPID.enable();
@@ -417,7 +199,6 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("Arm speed", arm.get());
 		SmartDashboard.putNumber("STRAIGHT PID", strPID.get());
 		SmartDashboard.putNumber("Gyro", gyro.getAngle());
-		SmartDashboard.putNumber("Drive distance", driveEnc.get());
 		
 		SmartDashboard.putNumber("Axis 1", joy2.getRawAxis(1));
 		
@@ -431,284 +212,5 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void testPeriodic() {
-	}
-	
-	enum AutonType {//A list of different auton types
-		rightScale, leftScale, rightSwitch, leftSwitch, straight, rightMiddle, leftMiddle, pos3LeftScale
-	}
-	
-	void leftMiddle() {
-		shift.set(in);
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(switchHeight);//Set the liftPID to 12000
-			step = 1;
-			break;
-		case 1://Step one of the left auton
-			if(driveEnc.get() < 10) {//If the drive distance is less than 10 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//Drive at -3/4 speed and use the PID
-			} else {//If the drive distance greater than 10 inches...
-				mainDrive.arcadeDrive(0, 0);///Stop
-				strPID.disable();
-				liftPID.enable();
-				step = 2;//Set the step to 2
-			}
-			break;
-		case 2://Step 2 of the left middle auton
-			if(gyro.getAngle() > -60) {//If the current angle is greater than -60
-				mainDrive.arcadeDrive(0, -0.6);//Slowly turn left
-			} else { //If it has reached the -60 degree mark...
-				mainDrive.arcadeDrive(0, 0);//Stop
-				strPID.setSetpoint(-60);//Set the straightPID setpoint to -60
-				strPID.enable();//Enable the straight PID
-				driveEnc.reset();//Reset the touchless encoder
-				armPID.enable();
-				step = 3;//Set the step to 3
-			}
-			break;
-		case 3://Step 3 of the left middle auton
-			if(driveEnc.get() < 144) {//If the robot has driven less than 144 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//Drive at -3/4 and drive straight with PID
-			} else {//If the robot has driven more than 144 inches...
-				mainDrive.arcadeDrive(0, 0);//Stop
-				strPID.disable();
-				step = 4;//Set the step to 4
-			}
-			break;
-		case 4://Step 4
-			if(gyro.getAngle() < 0) {//If the current gyro angle is less than 0...
-				mainDrive.arcadeDrive(0, 0.6);//Slowly turn right
-			} else {//If it has completely turned 60 degrees...
-				mainDrive.arcadeDrive(0, 0);//Stop
-				step = 5;//Set the step to 5
-			}
-			break;
-		case 5://Step 5
-			leftHolder.set(-0.5);//Output the cube into the switch
-			rightHolder.set(-0.5);
-			break;
-		}
-	}
-	
-	void rightMiddle() {//Method to do the right side of the switch when in position 2
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(switchHeight);//set the lift PID setpoint to 10000
-			armPID.enable();//Enable the armPID
-			liftPID.enable();//Enable the liftPID
-			step = 1;
-			break;
-		case 1:
-			if(driveEnc.get() < 83) {//If the robot has driven less than 83 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight at 3/4 speed
-			} else {//If it has driven 83 inches...
-				mainDrive.arcadeDrive(0, 0);//Stop
-				step = 2;//Set the step to 2
-			}
-			break;
-		case 2:
-			if(liftEnc.get() > -9000) {
-			} else {
-				leftHolder.set(-0.3);//Output the cube
-				rightHolder.set(-0.3);
-				strPID.disable();
-			}
-			break;
-		}
-	}
-	
-	void straight() {//Auton the drive straight
-		switch(step) {
-		case 0:
-			armPID.setSetpoint(armEnc.get());
-			armPID.enable();
-			step = 1;
-			break;
-		case 1:
-			if(driveEnc.get() < 83) {//TODO Check /If the robot has driven less than 83 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight at -3/4 speed
-			} else {//Else
-				mainDrive.arcadeDrive(0, 0);//Stop
-			}
-			break;
-		}
-	}
-	
-	void rightScale() {//Auton for the right side of the scale
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(scaleStartHeight);//Set the lift setpoint to 15000
-			liftPID.enable();//Enable the liftPID
-			armPID.enable();
-			step = 1;
-			break;
-		case 1:
-			if(driveEnc.get() < 234) {//If the robot has driven less than 252 inches
-				mainDrive.arcadeDrive(0.75, strPID.get()); //Drive forwards at 3/4 speed and drive straight
-			} else {//If the robot has driven further than 252 inches
-				mainDrive.arcadeDrive(0, 0);//Stop
-				step = 2;//Set the step to 2
-				strPID.disable();
-				liftPID.setSetpoint(scaleFinishHeight);//TODO check this /Set the lift setpoint to max height
-			}
-			break;
-		case 2://Step 2
-			if(gyro.getAngle() > -45) {//If the current gyro angle is greater than -35 degrees
-				mainDrive.arcadeDrive(0, -0.6);//Turn left
-			} else {//Else
-				step = 3;//Set the step to 3
-				mainDrive.arcadeDrive(0, 0);//Stop
-			}
-			break;
-		case 3://Step 3 TODO change to limit switch
-			if(liftEnc.get() > -23000) {//Wait until the lift is up
-			} else {
-				leftHolder.set(-0.75);
-				rightHolder.set(-0.75);
-				driveEnc.reset();
-				step = 4;
-			}
-			break;
-		case 4:
-			if(driveEnc.get() > -12) {
-				mainDrive.arcadeDrive(-0.7, 0);
-				leftHolder.set(-0.75);
-				rightHolder.set(-0.75);
-			} else {
-				mainDrive.arcadeDrive(0, 0);
-			}
-			break;
-		}
-	}
-	
-	void leftScale() {//Auton for the left side of the scale
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(scaleStartHeight);//Set the lift setpoint to a little over half way
-			armPID.enable();//Enable the arm PID
-			liftPID.enable();//Enable the lift PID
-			step = 1;
-			break;
-		case 1:
-			if(driveEnc.get() < 234) {//If the robot has driven less than 252 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//Drive straight
-			} else {//Else
-				mainDrive.arcadeDrive(0, 0);//Stop
-				step = 2;//go to step 2
-				strPID.disable();
-				liftPID.setSetpoint(scaleFinishHeight);//TODO check this /Set the lift pid setpoint to max
-			}
-			break;
-		case 2://Step 2
-			if(gyro.getAngle() < 45) {//If the current gyro angle is less than 45 degrees
-				mainDrive.arcadeDrive(0, 0.6);//Turn right
-			} else {
-				step = 3;//go to step 3
-				driveEnc.reset();//reset the touchless encoder
-				mainDrive.arcadeDrive(0, 0);//stop
-			}
-			break;
-		case 3://Step 3 TODO change to limit switch
-			if(liftEnc.get() > -23000) {//Wait until the lift is up
-			} else {
-				leftHolder.set(-0.75);
-				rightHolder.set(-0.75);
-				driveEnc.reset();
-				step = 4;
-			}
-			break;
-		case 4:
-			if(driveEnc.get() > -12) {
-				mainDrive.arcadeDrive(-0.7, 0);
-				leftHolder.set(-0.75);
-				rightHolder.set(-0.75);
-			} else {
-				mainDrive.arcadeDrive(0, 0);
-			}
-			break;
-		}
-	}
-	
-	void leftSwitch() {//auton for the left side of the switch
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(switchHeight);//St the lift to 10000
-			liftPID.enable();//enable the lift pid
-			step = 1;
-			break;
-		case 1:
-			if(driveEnc.get() < 131) {//if the robot has driven less than 149 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//drive straight
-			} else {
-				mainDrive.arcadeDrive(0, 0);//stop
-				strPID.disable();
-				armPID.enable();
-				step = 2;//go to step 2
-			}
-			break;
-		case 2://step 2
-			if(gyro.getAngle() < 80) {//if the current angle is less than 90 degrees
-				mainDrive.arcadeDrive(0, 0.6);//turn right
-			} else {//else
-				step = 3;//go to step 3
-				driveEnc.reset();//reset the touchless encoder
-				mainDrive.arcadeDrive(0, 0);//stop
-			}
-			break;
-		case 3:
-			if(driveEnc.get() < 9) {//if the robot has driven less than 9 inches
-				mainDrive.arcadeDrive(0.5, 0);//drive forwards
-			} else {//else
-				step = 4;//go to step 4
-				mainDrive.arcadeDrive(0, 0);//stop
-			}
-			break;
-		case 4:
-			cubeLift.set(-liftPID.get());//keep the lift in place
-			leftHolder.set(-0.35);//shoot the cube
-			rightHolder.set(-0.35);
-			break;
-		}
-	}
-	
-	void rightSwitch() {//auton for the right side of the switch
-		switch(step) {
-		case 0:
-			liftPID.setSetpoint(switchHeight);//set the lift setpoint
-			liftPID.enable();//enable lift PID
-			step = 1;
-			break;
-		case 1://step 1
-			if(driveEnc.get() < 131) {//if the robot has driven less tham 149 inches...
-				mainDrive.arcadeDrive(0.75, strPID.get());//drive straight
-			} else {//else
-				mainDrive.arcadeDrive(0, 0);//stop
-				strPID.disable();
-				armPID.enable();
-				step = 2;//go to step 2
-			}
-			break;
-		case 2://step 2
-			if(gyro.getAngle() > -80) {//turn left until -90 degrees
-				mainDrive.arcadeDrive(0, -0.6);
-			} else {
-				step = 3;//go to step 3
-				driveEnc.reset();//reset the encoder
-				mainDrive.arcadeDrive(0, 0);//stop
-			}
-			break;
-		case 3:
-			if(driveEnc.get() < 9) {//drive forward 9 inches
-				mainDrive.arcadeDrive(0.5, 0);
-			} else {
-				step = 4;//go to step 4
-				mainDrive.arcadeDrive(0, 0);//stop
-			}
-			break;
-		case 4:
-			leftHolder.set(-0.35);//output the cube
-			rightHolder.set(-0.35);
-			break;
-		}
 	}
 }
